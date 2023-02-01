@@ -1,14 +1,16 @@
 import torch
 import torch.nn as nn
+from torch.distributions import Categorical
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Define the policy network
-class PolicyNet(nn.Module):
+class PolicyNetwork(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
-        super(PolicyNet, self).__init__()
+        super(PolicyNetwork, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.fc3 = nn.Linear(hidden_size, output_size)
@@ -20,32 +22,34 @@ class PolicyNet(nn.Module):
         return x
 
 
+
 class PPO:
-    def __init__(self, env, input_size, hidden_size, output_size, fname = None, n_epochs=1000, n_episodes=10, n_steps=500, epsilon=0.1, lr=0.001):
+    def __init__(self, env, input_size, hidden_size, output_size, fname = None, n_epochs=1000, n_episodes=10, n_steps=400, epsilon=0.1, lr=0.001):
         self.env = env
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
-        self.policy_net = PolicyNet(self.input_size, self.hidden_size, self.output_size)
-
+        self.policy_net = PolicyNetwork(self.input_size, self.hidden_size, self.output_size)
         if fname is None:
             self.n_epochs = n_epochs
             self.n_episodes = n_episodes
             self.n_steps = n_steps
             self.epsilon = epsilon
             self.lr = lr
-            
-            self.old_policy_net = PolicyNet(self.input_size, self.hidden_size, self.output_size)
+            self.old_policy_net = PolicyNetwork(self.input_size, self.hidden_size, self.output_size)
             self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=self.lr)
         else :
-            self.policy_net.load_state_dict(torch.load(fname))
+            self.policy_net.load_state_dict(torch.load(f"models/{fname}.pkl"))
 
-        
     def select_action(self, state):
-        state = torch.from_numpy(state).float().unsqueeze(0)
+        if not state is torch.Tensor:
+            state = torch.from_numpy(state).float().to(device)
+        if len(state.size()) == 1:
+            state = state.unsqueeze(0)
+            
         probs = self.policy_net(state)
-        m = torch.distributions.Categorical(probs)
-        action = m.sample()
+        cat_distribution = Categorical(probs)
+        action = cat_distribution.sample()
         return action.item()
     
     def run_episode(self):
@@ -114,11 +118,55 @@ class PPO:
             self.optimizer.step()
             self.old_policy_net.load_state_dict(self.policy_net.state_dict())
         print(f"{'-'*25}Training Finished{'-'*25}")
-        print(f'Final results : Final reward = {avg_rewards[-1]:.2f} | Final loss = {avg_losses[-1]:.4f}')
         return self.policy_net, avg_rewards, avg_losses
 
+    def training_visualisation(self, avg_rewards, avg_losses, fname):
+        fig_path = f"training/{fname}.png"
+        epochs = range(len(avg_rewards))
+        
+        # Calculate the rolling average of avg_rewards
+        rolling_avg_rewards = rolling_average(avg_rewards, 10)
+
+        # Calculate the rolling average of avg_losses
+        rolling_avg_losses = rolling_average(avg_losses, 10)
+
+        fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+
+        # Plot avg_rewards in blue and rolling_avg_rewards in red
+        axs[0].plot(epochs[9:], avg_rewards[9:], color='blue', label='Avg Rewards')
+        axs[0].plot(epochs[9:], rolling_avg_rewards[9:], color='red', label='Rolling Avg Rewards')
+        axs[0].axhline(y=200, color='green', linestyle='-', label='Solved')
+        axs[0].set_xlabel('Epochs')
+        axs[0].set_ylabel('Avg Rewards')
+        axs[0].set_title('Avg Rewards in function of epochs')
+        axs[0].legend()
+
+        # Plot avg_losses in blue and rolling_avg_losses in red
+        axs[1].plot(epochs[9:], avg_losses[9:], color='blue', label='Avg Losses')
+        axs[1].plot(epochs[9:], rolling_avg_losses[9:], color='red', label='Rolling Avg Losses')
+        axs[1].set_xlabel('Epochs')
+        axs[1].set_ylabel('Avg Losses')
+        axs[1].set_title('Avg Losses in function of epochs')
+        axs[1].legend()
+
+        plt.tight_layout()
+        plt.savefig(fig_path)
+        plt.show()
 
 
-    
+def rolling_average(data, window_size):
+        rolling_sum = [0] * len(data)
+        rolling_average = [0] * len(data)
+        
+        for i in range(window_size):
+            rolling_sum[window_size - 1] += data[i]
+        
+        rolling_average[window_size - 1] = rolling_sum[window_size - 1] / window_size
+        
+        for i in range(window_size, len(data)):
+            rolling_sum[i] = rolling_sum[i - 1] - data[i - window_size] + data[i]
+            rolling_average[i] = rolling_sum[i] / window_size
+            
+        return rolling_average
 
 

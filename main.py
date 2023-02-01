@@ -3,7 +3,7 @@ import gym
 import torch
 import torch.optim as optim
 import numpy as np
-from PPO import PolicyNet, PPO
+from PPO import PPO
 from tqdm import tqdm
 
 def train(fname):
@@ -11,10 +11,12 @@ def train(fname):
     ppo = PPO(env, env.observation_space.shape[0], 64, env.action_space.n)
     model, avg_rewards, avg_losses = ppo.run_epochs()
     
-    torch.save(model.state_dict(), fname)
+    torch.save(model.state_dict(), f"models/{fname}.pkl")
     env.close()
 
-def evaluate(fname, env=None, n_episodes=10, max_steps_per_episode=500, render=False):
+    ppo.training_visualisation(avg_rewards, avg_losses, fname)
+
+def evaluate(fname, env=None, n_episodes=10, max_steps_per_episode=400, render=False):
     env = gym.make("LunarLander-v2")
     if render:
         env = gym.make('LunarLander-v2', render_mode='human')
