@@ -3,38 +3,44 @@ import gym
 import torch
 import torch.optim as optim
 import numpy as np
-from PPO import PolicyNet, run_epochs, select_action
+from PPO import PolicyNet, PPO
+from tqdm import tqdm
 
 def train(fname):
     env = gym.make("LunarLander-v2")
-    policy_net = PolicyNet(env.observation_space.shape[0], 64, env.action_space.n)
-    old_policy_net = PolicyNet(env.observation_space.shape[0], 64, env.action_space.n)
-    optimizer = optim.Adam(policy_net.parameters(), lr=1e-3)
-    model, avg_rewards, avg_losses = run_epochs(env, policy_net, old_policy_net, optimizer)
+    ppo = PPO(env, env.observation_space.shape[0], 64, env.action_space.n)
+    model, avg_rewards, avg_losses = ppo.run_epochs()
     
     torch.save(model.state_dict(), fname)
+    env.close()
 
-def evaluate(fname, env=None, n_episodes=10, max_steps_per_episode=200, render=False):
-    env = gym.make('LunarLander-v2', render_mode='human')
-    policy_net = PolicyNet(env.observation_space.shape[0], 64, env.action_space.n)
-    policy_net.load_state_dict(torch.load(fname))
+def evaluate(fname, env=None, n_episodes=10, max_steps_per_episode=500, render=False):
+    env = gym.make("LunarLander-v2")
+    if render:
+        env = gym.make('LunarLander-v2', render_mode='human')
+    print(f"{'-'*25}Evaluation started{'-'*25}")
+    ppo = PPO(env, env.observation_space.shape[0], 64, env.action_space.n, fname=fname)
 
     rewards = []
-    for episode in range(n_episodes):
+    for episode in tqdm(range(n_episodes), desc='Evaluate'):
         total_reward = 0
+        steps = 0
         done = False
         obs, _ = env.reset()
         
         for step in range(max_steps_per_episode):
-            action = select_action(obs, policy_net)
-            obs, reward, done, *_ = env.step(action)
+            steps += 1
+            action = ppo.select_action(obs)
+            next_obs, reward, done, *_ = env.step(action)
             if render: env.render()
             total_reward += reward
-            s = obs
+            obs = next_obs
             if done: break
-        
+        tqdm.write(f"Ep {episode + 1} : Reward = {total_reward} | Steps = {steps}")
         rewards.append(total_reward)
     print('Mean Reward:', np.mean(rewards))
+    print(f"{'-'*25}Evaluation finished{'-'*25}")
+    env.close()
 
 
 def main():
