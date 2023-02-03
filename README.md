@@ -1,7 +1,33 @@
 # Solving-Lunar-Lander-environment
 
+## How to run
+
+```
+python main.py --train [version]
+```
+
+Run the training and save the models in the files:
+
+-   model/actor_model_v[version].pkl
+-   model/critic_model_v[version].pkl
+
+The TensorBoard log is in the logs folder
+
+```
+python main.py --evaluate [version] --render
+```
+
+Run the evaluation for the models in the files:
+
+-   model/actor_model_v[version].pkl
+-   model/critic_model_v[version].pkl
+
+The flag render is here to render the evaluation.
+
+## Papers used for this project:
+
+-   [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)
+
 University of Rome, La Sapienza. Artificial Intelligence and Robotics. Reinforcement Learning Course A.Y. 2022/23
 
-Model_PPO_v1.pkl trained using (n_epochs=1000, n_episodes=10, n_steps=10) and took 0:12:07
-Model_PPO_v2.pkl trained using (n_epochs=1000, n_episodes=10, n_steps=500) and took 1:15:40
-Model_PPO_v3.pkl trained using (n_epochs=1000, n_episodes=10, n_steps=400) and took 2:06:19
+Esteban Vincent | Aurélien Lurois
