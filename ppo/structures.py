@@ -1,9 +1,10 @@
 import numpy as np
+import torch
 from torch.utils.data import Dataset
 
 class Episode:
     def __init__(self, gamma=0.99, lambd=0.95):
-        self.observations = []
+        self.states = []
         self.actions = []
         self.advantages = []
         self.rewards = []
@@ -14,9 +15,9 @@ class Episode:
         self.lambd = lambd
 
     def append(
-        self, observation, action, reward, value, log_probability
+        self, state, action, reward, value, log_probability
     ):
-        self.observations.append(observation)
+        self.states.append(state)
         self.actions.append(action)
         self.rewards.append(reward)
         self.values.append(value)
@@ -36,7 +37,7 @@ class Episode:
 class Epoch(Dataset):
     def __init__(self):
         self.episodes = []
-        self.observations = []
+        self.states = []
         self.actions = []
         self.advantages = []
         self.rewards = []
@@ -48,7 +49,7 @@ class Epoch(Dataset):
 
     def build_dataset(self):
         for episode in self.episodes:
-            self.observations += episode.observations
+            self.states += episode.states
             self.actions += episode.actions
             self.advantages += episode.advantages
             self.rewards += episode.rewards
@@ -58,7 +59,7 @@ class Epoch(Dataset):
         assert (
             len(
                 {
-                    len(self.observations),
+                    len(self.states),
                     len(self.actions),
                     len(self.advantages),
                     len(self.rewards),
@@ -72,17 +73,44 @@ class Epoch(Dataset):
         self.advantages = normalize_list(self.advantages)
 
     def __len__(self):
-        return len(self.observations)
+        return len(self.states)
 
     def __getitem__(self, idx):
         return (
-            self.observations[idx],
+            self.states[idx],
             self.actions[idx],
             self.advantages[idx],
             self.log_probabilities[idx],
             self.rewards_target[idx],
         )
 
+
+
+class FreeFallEpisode:
+    def __init__(self, gravity, wind_power, turbulance_power):
+        self.gravity = gravity
+        self.wind_power = wind_power
+        self.turbulance_power = turbulance_power
+        self.observation = []
+
+    def append(self, state):
+        self.observation += state.tolist()
+
+class FreeFallEpoch:
+    def __init__(self, gravity, wind_power, turbulance_power):
+        self.gravity = gravity
+        self.wind_power = wind_power
+        self.turbulance_power = turbulance_power
+        self.observations = []
+
+    def add_episode(self, episode):
+        self.observations.append(episode.observation)
+
+    def get_dynamics(self):
+        dynamics = np.array([self.gravity, self.wind_power, self.turbulance_power])
+        return dynamics
+    
+        
 
 
 def cumulative_sum(array, gamma=1.0):

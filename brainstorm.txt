@@ -1,0 +1,43 @@
+For the first like 20 steps do nothing and observe the state to deduct the dynamic parameters
+Maybe use Episode only from step 21 and before use class Analyse to get the dynamic parameters
+Add dynamic parameters to the networks.
+
+AnalyseNetwork:
+input :state
+output:synamic parameters
+def generate_reward(network_output, true_values):
+    reward = -torch.mean((network_output - true_values)**2)
+    return reward
+
+
+
+train it on 1000 randomised and then do the real training
+
+
+
+1: θ ← random weights
+2: ϕ ← random weights
+3: while not done do
+    4: g ∼ ρg sample goal #generate goal
+    5: µ ∼ ρµ sample dynamics #generate dynamics
+    6: Generate rollout τ = (s0, a0, ..., sT )with dynamics µ
+    7: for each st, at in τ do
+        8: rt ← r(st, g)
+    9: end for
+    10: Store (τ, {rt}, g, µ) in M
+    11: Sample episode (τ, {rt}, g, µ) from M
+    12: with probability k
+        13: g ← replay new goal with HER
+        14: rt ← r(st, g) for each t
+    15: endwith
+    16: for each t do
+        17: Compute memories zt and yt
+        18: aˆt+1 ← πθ(st+1, zt+1, g)
+        19: aˆt ← πθ(st, zt, g)
+        20: qt ← rt + γQϕ(st+1, aˆt+1, yt+1, g, µ)
+        21: 4qt ← qt − Qϕ(st, at, yt, g, µ)
+    22: end for
+    23: Oϕ =
+    24: Oθ =
+    25: Update value function and policy with Oθ and Oϕ
+26: end while

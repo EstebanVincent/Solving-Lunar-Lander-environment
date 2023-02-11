@@ -17,10 +17,9 @@ The TensorBoard log is in the logs folder
 python main.py --evaluate [version] --render
 ```
 
-Run the evaluation for the models in the files:
+Run the evaluation for the model in the file:
 
 -   model/actor_model_v[version].pkl
--   model/critic_model_v[version].pkl
 
 The flag render is here to render the evaluation.
 

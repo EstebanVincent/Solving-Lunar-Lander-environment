@@ -58,15 +58,15 @@ class ActorNetwork(Module):
 
         for i in range(epochs):
             losses = []
-            for observations, actions, advantages, log_probabilities, _ in data_loader:
-                observations = observations.float().to(device)
+            for states, actions, advantages, log_probabilities, _ in data_loader:
+                states = states.float().to(device)
                 actions = actions.long().to(device)
                 advantages = advantages.float().to(device)
                 old_log_probabilities = log_probabilities.float().to(device)
 
                 self.optimizer.zero_grad()
 
-                new_log_probabilities, entropy = self.evaluate_actions(observations, actions)
+                new_log_probabilities, entropy = self.evaluate_actions(states, actions)
 
                 loss = (self.ac_loss(new_log_probabilities, old_log_probabilities, advantages, clip,).mean()- c1 * entropy.mean())
                 loss.backward()
@@ -131,13 +131,13 @@ class CriticNetwork(Module):
         epochs_losses = []
         for i in range(epochs):
             losses = []
-            for states, _, _, _, rewards_target in data_loader:
-                states = states.float().to(device)
+            for state, _, _, _, rewards_target in data_loader:
+                state = state.float().to(device)
                 rewards_target = rewards_target.float().to(device)
 
                 self.optimizer.zero_grad()
 
-                values = self(states)
+                values = self(state)
 
                 loss = (values - rewards_target).pow(2).mean()
 
@@ -149,6 +149,47 @@ class CriticNetwork(Module):
 
             mean_loss = np.mean(losses)
 
+            epochs_losses.append(mean_loss)
+
+        return epochs_losses
+
+
+
+class DynamicsIdNetwork(Module):
+    def __init__(self, input_size, output_size, optimizer, lr): #input = state_size*10 = 80, output = 3
+        super(DynamicsIdNetwork, self).__init__()
+        self.fc1 = Linear(input_size, 256)
+        self.fc2 = Linear(256, 128)
+        self.fc3 = Linear(128, 64)
+        self.fc4 = Linear(64, output_size)
+
+        self.l_relu = LeakyReLU(0.1)
+        self.optimizer = optimizer(self.parameters(), lr=lr)
+        
+
+    def forward(self, x):
+        x = self.l_relu(self.fc1(x))
+        x = self.l_relu(self.fc2(x))
+        x = self.l_relu(self.fc3(x))
+
+        y = self.fc4(x)
+        return y
+
+
+    def train(self, epoch, epochs=10):
+        epochs_losses = []
+        for i_epoch in range(epochs):
+            losses = []
+            for observation in epoch.observations:
+                self.optimizer.zero_grad()
+                identified_values = self(torch.from_numpy(np.array(observation)).float().to(device))
+                true_values = torch.from_numpy(epoch.get_dynamics()).float().to(device)
+                loss = torch.mean((identified_values - true_values)**2)
+                loss.backward()
+                self.optimizer.step()
+                losses.append(loss.item())
+
+            mean_loss = np.mean(losses)
             epochs_losses.append(mean_loss)
 
         return epochs_losses
