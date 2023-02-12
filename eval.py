@@ -12,7 +12,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class Demo:
     def __init__(self, render):
-        self.model_dir = "model/demo"
+        self.model_dir = "model/actor_critic/demo"
         self.render = render
 
         self.state_dim = 8
@@ -115,7 +115,7 @@ class Eval:
         self.actor_network = ActorNetwork(
             self.state_dim + self.dynamics_dim, self.action_dim, torch.optim.Adam, self.lr).to(device)
         self.actor_network.load_state_dict(torch.load(
-            f"{self.model_dir}/actor_model_v{self.m_version}.pkl"))
+            f"{self.model_dir}/actor_critic/actor_model_v{self.m_version}.pkl"))
 
         self.dynamic_id_network = DynamicsIdNetwork(
             self.state_dim*10, self.dynamics_dim, torch.optim.Adam, self.lr).to(device)

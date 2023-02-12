@@ -14,7 +14,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DiscoverEnv:
     def __init__(self, d_version, n_epochs):
-        self.log_dir = "logs/analysis"
+        self.log_dir = "logs/dynamic"
         self.model_dir = "model"
 
         self.d_version = d_version
@@ -80,7 +80,7 @@ class DiscoverEnv:
 
 class Train:
     def __init__(self, d_version, m_version):
-        self.log_dir = "logs/train"
+        self.log_dir = "logs/actor_critic"
         self.model_dir = "model"
 
         self.d_version = d_version
@@ -183,6 +183,6 @@ class Train:
             env.close()
         print(f"{'-'*25}Training Finished{'-'*25}")
         torch.save(self.actor_network.state_dict(),
-                   f"{self.model_dir}/actor_model_v{self.m_version}.pkl")
+                   f"{self.model_dir}/actor_critic/actor_model_v{self.m_version}.pkl")
         torch.save(self.critic_network.state_dict(),
-                   f"{self.model_dir}/critic_model_v{self.m_version}.pkl")
+                   f"{self.model_dir}/actor_critic/critic_model_v{self.m_version}.pkl")
