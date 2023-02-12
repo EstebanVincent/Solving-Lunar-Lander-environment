@@ -12,9 +12,75 @@ from ppo.utils import d_state, random_dynamics
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class Agent:
+class DiscoverEnv:
+    def __init__(self, version, n_epochs):
+        self.log_dir = "logs/analysis"
+        self.model_dir = "model"
+
+        self.version = version
+
+        self.state_dim = 8
+        self.dynamics_dim = 3
+        self.lr = 1e-3
+
+        self.episode_ite = 0
+        self.epoch_ite = 0
+
+        self.n_epochs = n_epochs
+        self.n_episodes = 20
+        self.n_steps = 10
+
+        self.dynamic_id_network = DynamicsIdNetwork(
+            self.state_dim*10, self.dynamics_dim, torch.optim.Adam, self.lr).to(device)
+        self.writer = SummaryWriter(log_dir=self.log_dir)  # logs
+
+    def dynamics_identification(self, env, gravity, wind_power, turbulance_power):
+        freefall = FreeFallEpisode(gravity, wind_power, turbulance_power)
+        starting_state, _ = env.reset()
+        freefall.append(starting_state)
+        for step in range(9):  # counting starting step
+            next_state, *_ = env.step(0)       # do nothing
+            freefall.append(next_state)
+        loss = self.dynamic_id_network.train(freefall)
+        freefall.loss = loss
+        return loss
+
+    def train(self):
+        print(f"{'-'*25}Training started{'-'*25}")
+        for i_epoch in tqdm(range(self.n_epochs), desc="Epochs"):
+            gravity, wind_power, turbulance_power = random_dynamics()
+            epoch = FreeFallEpoch(gravity, wind_power, turbulance_power)
+            env = gym.make(
+                "LunarLander-v2",
+                gravity=gravity,
+                enable_wind=True,
+                wind_power=wind_power,
+                turbulence_power=turbulance_power,
+            )
+            for i_episode in range(self.n_episodes):
+                episode = FreeFallEpisode(
+                    gravity, wind_power, turbulance_power)
+                starting_state, _ = env.reset()
+                episode.append(starting_state)
+                for step in range(self.n_steps - 1):  # counting starting step
+                    next_state, *_ = env.step(0)       # do nothing
+                    episode.append(next_state)
+                self.episode_ite += 1
+                epoch.add_episode(episode)
+            dynamic_losses = self.dynamic_id_network.train(epoch)
+
+            for d_loss in dynamic_losses:
+                self.epoch_ite += 1
+                self.writer.add_scalar("Dynamic Loss", d_loss, self.epoch_ite)
+            env.close()
+        print(f"{'-'*25}Training Finished{'-'*25}")
+        torch.save(self.dynamic_id_network.state_dict(),
+                   f"{self.model_dir}/dynamic_id_model_v{self.version}.pkl")
+
+
+class Train:
     def __init__(self, version, existing_model=False):
-        self.log_dir = "logs/agent"
+        self.log_dir = "logs/train"
         self.model_dir = "model"
 
         self.version = version
@@ -29,7 +95,7 @@ class Agent:
         self.dynamic_id_network = DynamicsIdNetwork(
             self.state_dim*10, self.dynamics_dim, torch.optim.Adam, self.lr).to(device)
         self.dynamic_id_network.load_state_dict(torch.load(
-            f"{self.model_dir}/dynamic_id_model.pkl"))
+            f"{self.model_dir}/dynamic_id/dynamic_id_model.pkl"))
 
         if not existing_model:
 
@@ -125,87 +191,3 @@ class Agent:
                    f"{self.model_dir}/actor_model_v{self.version}.pkl")
         torch.save(self.critic_network.state_dict(),
                    f"{self.model_dir}/critic_model_v{self.version}.pkl")
-
-    def evaluate(self, n_episodes=10):
-        print(f"{'-'*25}Evaluation started{'-'*25}")
-
-        scores = []
-        for episode in tqdm(range(n_episodes), desc='Evaluate'):
-            state, _ = self.env.reset()
-            score = 0
-            while True:
-                state = torch.from_numpy(state).float()
-                action, _ = self.actor_network.select_action(state)
-                next_state, reward, done, *_ = self.env.step(action)
-                score += reward
-                if done:
-                    break
-                state = next_state
-            scores.append(score)
-        print(f"{'-'*25}Evaluation finished{'-'*25}")
-        print('Mean Score:', np.mean(scores))
-
-
-class Analysis:
-    def __init__(self, version, n_epochs):
-        self.log_dir = "logs/analysis"
-        self.model_dir = "model"
-
-        self.version = version
-
-        self.state_dim = 8
-        self.dynamics_dim = 3
-        self.lr = 1e-3
-
-        self.episode_ite = 0
-        self.epoch_ite = 0
-
-        self.n_epochs = n_epochs
-        self.n_episodes = 20
-        self.n_steps = 10
-
-        self.dynamic_id_network = DynamicsIdNetwork(
-            self.state_dim*10, self.dynamics_dim, torch.optim.Adam, self.lr).to(device)
-        self.writer = SummaryWriter(log_dir=self.log_dir)  # logs
-
-    def dynamics_identification(self, env, gravity, wind_power, turbulance_power):
-        freefall = FreeFallEpisode(gravity, wind_power, turbulance_power)
-        starting_state, _ = env.reset()
-        freefall.append(starting_state)
-        for step in range(9):  # counting starting step
-            next_state, *_ = env.step(0)       # do nothing
-            freefall.append(next_state)
-        loss = self.dynamic_id_network.train(freefall)
-        freefall.loss = loss
-        return loss
-
-    def train(self):
-        print(f"{'-'*25}Training started{'-'*25}")
-        for i_epoch in tqdm(range(self.n_epochs), desc="Epochs"):
-            gravity, wind_power, turbulance_power = random_dynamics()
-            epoch = FreeFallEpoch(gravity, wind_power, turbulance_power)
-            env = gym.make(
-                "LunarLander-v2",
-                gravity=gravity,
-                enable_wind=True,
-                wind_power=wind_power,
-                turbulence_power=turbulance_power,
-            )
-            for i_episode in range(self.n_episodes):
-                episode = FreeFallEpisode(
-                    gravity, wind_power, turbulance_power)
-                starting_state, _ = env.reset()
-                episode.append(starting_state)
-                for step in range(self.n_steps - 1):  # counting starting step
-                    next_state, *_ = env.step(0)       # do nothing
-                    episode.append(next_state)
-                self.episode_ite += 1
-                epoch.add_episode(episode)
-            dynamic_losses = self.dynamic_id_network.train(epoch)
-
-            for d_loss in dynamic_losses:
-                self.epoch_ite += 1
-                self.writer.add_scalar("Dynamic Loss", d_loss, self.epoch_ite)
-        print(f"{'-'*25}Training Finished{'-'*25}")
-        torch.save(self.dynamic_id_network.state_dict(),
-                   f"{self.model_dir}/dynamic_id_model_v{self.version}.pkl")
