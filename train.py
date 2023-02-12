@@ -48,6 +48,7 @@ class DiscoverEnv:
     def train(self):
         print(f"{'-'*25}Training started{'-'*25}")
         for i_epoch in tqdm(range(self.n_epochs), desc="Epochs"):
+
             gravity, wind_power, turbulance_power = random_dynamics()
             epoch = FreeFallEpoch(gravity, wind_power, turbulance_power)
             env = gym.make(
@@ -73,6 +74,10 @@ class DiscoverEnv:
                 self.epoch_ite += 1
                 self.writer.add_scalar("Dynamic Loss", d_loss, self.epoch_ite)
             env.close()
+            if i_epoch % 100_000 == 0 and i_epoch != 0:
+                print(f"Saving model at epoch {i_epoch}")
+                torch.save(self.dynamic_id_network.state_dict(
+                ), f"{self.model_dir}/dynamic_id/model_v{self.d_version}_{i_epoch}.pkl")
         print(f"{'-'*25}Training Finished{'-'*25}")
         torch.save(self.dynamic_id_network.state_dict(),
                    f"{self.model_dir}/dynamic_id/model_v{self.d_version}.pkl")
