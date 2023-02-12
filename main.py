@@ -4,8 +4,8 @@ import gym
 from ppo.ppo import Agent, Analysis
 
 
-def analyse(model_version):
-    analyse = Analysis(model_version)
+def analyse(model_version, n_epochs):
+    analyse = Analysis(model_version, n_epochs)
     analyse.train()
 
 
@@ -28,13 +28,14 @@ def evaluate(models_version, render):
 def main():
     parser = argparse.ArgumentParser(description='Run training and evaluation')
     parser.add_argument('--render', action='store_true')
+    parser.add_argument('--n_epochs', type=int, default=100_000)
     parser.add_argument('-a', '--analyse', default=None)
     parser.add_argument('-t', '--train', default=None)
     parser.add_argument('-e', '--evaluate', default=None)
     args = parser.parse_args()
 
     if args.analyse:
-        analyse(args.analyse)
+        analyse(args.analyse, args.n_epochs)
 
     if args.train:
         train(args.train)

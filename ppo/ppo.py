@@ -124,7 +124,7 @@ class Agent:
 
 
 class Analysis:
-    def __init__(self, version):
+    def __init__(self, version, n_epochs):
         self.log_dir = "logs/analysis"
         self.model_dir = "model"
 
@@ -137,7 +137,7 @@ class Analysis:
         self.episode_ite = 0
         self.epoch_ite = 0
 
-        self.n_epochs = 100
+        self.n_epochs = n_epochs
         self.n_episodes = 20
         self.n_steps = 10
 
@@ -189,7 +189,7 @@ class Analysis:
 
     @staticmethod
     def random_dynamics():
-        gravity = np.round(np.random.uniform(-11.9, -0.1), 1)
-        wind_power = np.round(np.random.uniform(0.1, 20), 1)
+        gravity = np.random.randint(-11, 0)
+        wind_power = np.random.randint(1, 20)
         turbulance_power = np.round(np.random.uniform(0.1, 2), 1)
         return gravity, wind_power, turbulance_power
