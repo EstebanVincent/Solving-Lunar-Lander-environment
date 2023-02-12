@@ -148,6 +148,7 @@ class DynamicsIdNetwork(Module):
         self.fc2 = Linear(256, 128)
         self.fc3 = Linear(128, 64)
         self.fc4 = Linear(64, output_size)
+        self.fc5 = RoundLayer(output_size, output_size)
 
         self.l_relu = LeakyReLU(0.1)
         self.optimizer = optimizer(self.parameters(), lr=lr)
@@ -156,8 +157,9 @@ class DynamicsIdNetwork(Module):
         x = self.l_relu(self.fc1(x))
         x = self.l_relu(self.fc2(x))
         x = self.l_relu(self.fc3(x))
+        x = self.l_relu(self.fc4(x))
 
-        y = self.fc4(x)
+        y = self.fc5(x)
         return y
 
     def train(self, epoch, epochs=10):
@@ -179,3 +181,17 @@ class DynamicsIdNetwork(Module):
             epochs_losses.append(mean_loss)
 
         return epochs_losses
+
+
+class RoundLayer(Module):
+    def __init__(self, input_size, output_size):
+        super(RoundLayer, self).__init__()
+
+    def forward(self, x):
+        rounded_tensor = torch.tensor(
+            [round(x.item()) if i < 2
+             else round(x.item(), 1)
+             for i, x in enumerate(x)],
+            requires_grad=True
+        )
+        return rounded_tensor

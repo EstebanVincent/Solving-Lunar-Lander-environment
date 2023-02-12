@@ -13,11 +13,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class DiscoverEnv:
-    def __init__(self, version, n_epochs):
+    def __init__(self, d_version, n_epochs):
         self.log_dir = "logs/analysis"
         self.model_dir = "model"
 
-        self.version = version
+        self.d_version = d_version
 
         self.state_dim = 8
         self.dynamics_dim = 3
@@ -75,45 +75,40 @@ class DiscoverEnv:
             env.close()
         print(f"{'-'*25}Training Finished{'-'*25}")
         torch.save(self.dynamic_id_network.state_dict(),
-                   f"{self.model_dir}/dynamic_id_model_v{self.version}.pkl")
+                   f"{self.model_dir}/dynamic_id/model_v{self.d_version}.pkl")
 
 
 class Train:
-    def __init__(self, version, existing_model=False):
+    def __init__(self, d_version, m_version):
         self.log_dir = "logs/train"
         self.model_dir = "model"
 
-        self.version = version
+        self.d_version = d_version
+        self.m_version = m_version
 
         self.state_dim = 8
         self.action_dim = 4
         self.dynamics_dim = 3
         self.lr = 1e-3
 
-        self.actor_network = ActorNetwork(
-            self.state_dim + self.dynamics_dim, self.action_dim, torch.optim.Adam, self.lr).to(device)
+        self.episode_ite = 0
+        self.epoch_ite = 0
+
+        self.n_epochs = 100
+        self.n_episodes = 20
+        self.n_steps = 500
+
+        self.writer = SummaryWriter(log_dir=self.log_dir)  # logs
+
         self.dynamic_id_network = DynamicsIdNetwork(
             self.state_dim*10, self.dynamics_dim, torch.optim.Adam, self.lr).to(device)
+        self.actor_network = ActorNetwork(
+            self.state_dim + self.dynamics_dim, self.action_dim, torch.optim.Adam, self.lr).to(device)
+        self.critic_network = CriticNetwork(
+            self.state_dim + self.dynamics_dim, torch.optim.Adam, self.lr).to(device)
+
         self.dynamic_id_network.load_state_dict(torch.load(
-            f"{self.model_dir}/dynamic_id/dynamic_id_model.pkl"))
-
-        if not existing_model:
-
-            self.episode_ite = 0
-            self.epoch_ite = 0
-
-            self.n_epochs = 100
-            self.n_episodes = 20
-            self.n_steps = 500
-
-            self.writer = SummaryWriter(log_dir=self.log_dir)  # logs
-
-            self.critic_network = CriticNetwork(
-                self.state_dim + self.dynamics_dim, torch.optim.Adam, self.lr).to(device)
-
-        else:
-            self.actor_network.load_state_dict(torch.load(
-                f"{self.model_dir}/actor_model_v{self.version}.pkl"))
+            f"{self.model_dir}/dynamic_id/model_v{self.d_version}.pkl"))
 
     def train(self):
         print(f"{'-'*25}Training started{'-'*25}")
@@ -188,6 +183,6 @@ class Train:
             env.close()
         print(f"{'-'*25}Training Finished{'-'*25}")
         torch.save(self.actor_network.state_dict(),
-                   f"{self.model_dir}/actor_model_v{self.version}.pkl")
+                   f"{self.model_dir}/actor_model_v{self.m_version}.pkl")
         torch.save(self.critic_network.state_dict(),
-                   f"{self.model_dir}/critic_model_v{self.version}.pkl")
+                   f"{self.model_dir}/critic_model_v{self.m_version}.pkl")

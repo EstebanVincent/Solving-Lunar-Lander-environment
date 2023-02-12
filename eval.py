@@ -48,10 +48,63 @@ class Demo:
         print('Mean Score:', np.mean(scores))
 
 
-class Eval:
-    def __init__(self, version):
+class DiscoverEval:
+    def __init__(self, d_version):
         self.model_dir = "model"
-        self.version = version
+        self.d_version = d_version
+
+        self.state_dim = 8
+        self.dynamics_dim = 3
+        self.lr = 1e-3
+
+        self.dynamic_id_network = DynamicsIdNetwork(
+            self.state_dim*10, self.dynamics_dim, torch.optim.Adam, self.lr).to(device)
+        self.dynamic_id_network.load_state_dict(torch.load(
+            f"{self.model_dir}/dynamic_id/model_v{self.d_version}.pkl"))
+
+    def evaluate(self, n_episodes=10):
+        print(f"{'-'*35}Evaluation started{'-'*35}")
+
+        losses = []
+        for episode in range(n_episodes):
+            # generate random dynamic parameters
+            gravity, wind_power, turbulance_power = random_dynamics()
+
+            env = gym.make(
+                "LunarLander-v2",
+                gravity=gravity,
+                enable_wind=True,
+                wind_power=wind_power,
+                turbulence_power=turbulance_power,
+            )
+            state, _ = env.reset()
+
+            freefall = FreeFallEpisode(gravity, wind_power, turbulance_power)
+            freefall.append(state)
+
+            for step in range(9):
+                state, *_ = env.step(0)       # do nothing
+                freefall.append(state)
+            freefall_obs = torch.from_numpy(
+                np.array(freefall.observation)).float()
+
+            y_pred = self.dynamic_id_network(freefall_obs)
+            y_true = torch.from_numpy(
+                np.array([gravity, wind_power, turbulance_power]))
+
+            loss = torch.mean((y_pred - y_true)**2)
+            losses.append(loss.item())
+            print(
+                f"Loss : {loss} | y_pred = {y_pred.detach().numpy()} | y_true = {y_true.numpy()}")
+            env.close()
+        print(f"{'-'*35}Evaluation finished{'-'*35}")
+
+
+class Eval:
+    def __init__(self, d_version, m_version):
+        self.model_dir = "model"
+        self.d_version = d_version
+        self.m_version = m_version
 
         self.state_dim = 8
         self.action_dim = 4
@@ -62,12 +115,12 @@ class Eval:
         self.actor_network = ActorNetwork(
             self.state_dim + self.dynamics_dim, self.action_dim, torch.optim.Adam, self.lr).to(device)
         self.actor_network.load_state_dict(torch.load(
-            f"{self.model_dir}/actor_model_v{self.version}.pkl"))
+            f"{self.model_dir}/actor_model_v{self.m_version}.pkl"))
 
         self.dynamic_id_network = DynamicsIdNetwork(
             self.state_dim*10, self.dynamics_dim, torch.optim.Adam, self.lr).to(device)
         self.dynamic_id_network.load_state_dict(torch.load(
-            f"{self.model_dir}/dynamic_id/dynamic_id_model.pkl"))
+            f"{self.model_dir}/dynamic_id/model_v{self.d_version}.pkl"))
 
     def evaluate(self, n_episodes=10, render=False):
         print(f"{'-'*25}Evaluation started{'-'*25}")
