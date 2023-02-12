@@ -2,8 +2,12 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+from ppo.utils import cumulative_sum, normalize_list, d_state, d_epoch_state
+
+
 class Episode:
-    def __init__(self, gamma=0.99, lambd=0.95):
+    def __init__(self, dynamic_values, gamma=0.99, lambd=0.95):
+        self.dynamic_values = dynamic_values
         self.states = []
         self.actions = []
         self.advantages = []
@@ -29,15 +33,16 @@ class Episode:
 
         deltas = rewards[:-1] + self.gamma * values[1:] - values[:-1]
 
-        self.advantages = cumulative_sum(deltas.tolist(), gamma=self.gamma * self.lambd)
-        self.rewards_target = cumulative_sum(rewards.tolist(), gamma=self.gamma)[:-1]
-
+        self.advantages = cumulative_sum(
+            deltas.tolist(), gamma=self.gamma * self.lambd)
+        self.rewards_target = cumulative_sum(
+            rewards.tolist(), gamma=self.gamma)[:-1]
 
 
 class Epoch(Dataset):
     def __init__(self):
         self.episodes = []
-        self.states = []
+        self.d_states = []
         self.actions = []
         self.advantages = []
         self.rewards = []
@@ -49,7 +54,8 @@ class Epoch(Dataset):
 
     def build_dataset(self):
         for episode in self.episodes:
-            self.states += episode.states
+            self.d_states += d_epoch_state(episode.states,
+                                           episode.dynamic_values)
             self.actions += episode.actions
             self.advantages += episode.advantages
             self.rewards += episode.rewards
@@ -59,7 +65,7 @@ class Epoch(Dataset):
         assert (
             len(
                 {
-                    len(self.states),
+                    len(self.d_states),
                     len(self.actions),
                     len(self.advantages),
                     len(self.rewards),
@@ -73,17 +79,16 @@ class Epoch(Dataset):
         self.advantages = normalize_list(self.advantages)
 
     def __len__(self):
-        return len(self.states)
+        return len(self.actions)
 
     def __getitem__(self, idx):
         return (
-            self.states[idx],
+            self.d_states[idx],
             self.actions[idx],
             self.advantages[idx],
             self.log_probabilities[idx],
             self.rewards_target[idx],
         )
-
 
 
 class FreeFallEpisode:
@@ -96,6 +101,7 @@ class FreeFallEpisode:
     def append(self, state):
         self.observation += state.tolist()
 
+
 class FreeFallEpoch:
     def __init__(self, gravity, wind_power, turbulance_power):
         self.gravity = gravity
@@ -107,23 +113,6 @@ class FreeFallEpoch:
         self.observations.append(episode.observation)
 
     def get_dynamics(self):
-        dynamics = np.array([self.gravity, self.wind_power, self.turbulance_power])
+        dynamics = np.array(
+            [self.gravity, self.wind_power, self.turbulance_power])
         return dynamics
-    
-        
-
-
-def cumulative_sum(array, gamma=1.0):
-    curr = 0
-    cumulative_array = []
-
-    for a in array[::-1]:
-        curr = a + gamma * curr
-        cumulative_array.append(curr)
-
-    return cumulative_array[::-1]
-
-def normalize_list(array):
-    array = np.array(array)
-    array = (array - np.mean(array)) / (np.std(array) + 1e-5)
-    return array.tolist()
