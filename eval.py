@@ -57,6 +57,7 @@ class Eval:
         self.action_dim = 4
         self.dynamics_dim = 3
         self.lr = 1e-3
+        self.n_steps = 500
 
         self.actor_network = ActorNetwork(
             self.state_dim + self.dynamics_dim, self.action_dim, torch.optim.Adam, self.lr).to(device)
@@ -108,7 +109,7 @@ class Eval:
             id_dynamic_values = self.dynamic_id_network(
                 freefall_obs)
 
-            while True:
+            for step in range(9, self.n_steps):
                 d_obs = d_state(state, id_dynamic_values)
                 action, _ = self.actor_network.select_action(d_obs)
                 next_state, reward, done, *_ = env.step(action)

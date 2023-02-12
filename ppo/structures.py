@@ -1,8 +1,7 @@
 import numpy as np
-import torch
 from torch.utils.data import Dataset
 
-from ppo.utils import cumulative_sum, normalize_list, d_state, d_epoch_state
+from ppo.utils import cumulative_sum, normalize_list, d_epoch_state
 
 
 class Episode:
