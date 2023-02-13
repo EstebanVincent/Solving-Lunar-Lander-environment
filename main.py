@@ -46,8 +46,8 @@ def evaluate(d_version, m_version, render):
 
 def main():
     parser = argparse.ArgumentParser(description='Run training and evaluation')
-    parser.add_argument('--m_version', type=int)
-    parser.add_argument('--d_version', type=int)
+    parser.add_argument('--m_version')
+    parser.add_argument('--d_version')
 
     parser.add_argument('--n_epochs', type=int, default=100_000)
 
