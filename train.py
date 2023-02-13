@@ -64,7 +64,7 @@ class DiscoverEnv:
                 self.writer.add_scalar("Dynamic Loss", d_loss, self.epoch_ite)
             env.close()
             if i_epoch % 100_000 == 0 and i_epoch != 0:
-                print(f"Saving model at epoch {i_epoch}")
+                print(f"\nSaving model at epoch {i_epoch}")
                 torch.save(self.dynamic_id_network.state_dict(
                 ), f"{self.model_dir}/dynamic_id/model_v{self.d_version}_{i_epoch}.pkl")
         print(f"{'-'*25}Training Finished{'-'*25}")
