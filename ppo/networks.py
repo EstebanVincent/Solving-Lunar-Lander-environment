@@ -162,9 +162,9 @@ class DynamicsIdNetwork(Module):
         y = self.fc5(x)
         return y
 
-    def train(self, epoch, epochs=10):
+    def train(self, epoch, n_epochs=10):
         epochs_losses = []
-        for i_epoch in range(epochs):
+        for i_epoch in range(n_epochs):
             losses = []
             for observation in epoch.observations:
                 self.optimizer.zero_grad()
