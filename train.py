@@ -34,17 +34,6 @@ class DiscoverEnv:
             self.state_dim*10, self.dynamics_dim, torch.optim.Adam, self.lr).to(device)
         self.writer = SummaryWriter(log_dir=self.log_dir)  # logs
 
-    def dynamics_identification(self, env, gravity, wind_power, turbulance_power):
-        freefall = FreeFallEpisode(gravity, wind_power, turbulance_power)
-        starting_state, _ = env.reset()
-        freefall.append(starting_state)
-        for step in range(9):  # counting starting step
-            next_state, *_ = env.step(0)       # do nothing
-            freefall.append(next_state)
-        loss = self.dynamic_id_network.train(freefall)
-        freefall.loss = loss
-        return loss
-
     def train(self):
         print(f"{'-'*25}Training started{'-'*25}")
         for i_epoch in tqdm(range(self.n_epochs), desc="Epochs"):

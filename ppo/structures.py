@@ -111,7 +111,10 @@ class FreeFallEpoch:
     def add_episode(self, episode):
         self.observations.append(episode.observation)
 
-    def get_dynamics(self):
+
+    def get_dynamics_inv_g(self):
         dynamics = np.array(
-            [self.gravity, self.wind_power, self.turbulance_power])
+            [abs(self.gravity), self.wind_power, self.turbulance_power])
         return dynamics
+
+    

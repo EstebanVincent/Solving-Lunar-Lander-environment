@@ -124,7 +124,7 @@ class CriticNetwork(Module):
                 self.optimizer.zero_grad()
 
                 values = self(d_state)
-
+                
                 loss = (values - rewards_target).pow(2).mean()
 
                 loss.backward(retain_graph=True)
@@ -141,14 +141,15 @@ class CriticNetwork(Module):
 
 
 class DynamicsIdNetwork(Module):
+    """
+    predict the opposite gravity, wind power, turbulance power
+    """
     # input = state_size*10 = 80, output = 3
     def __init__(self, input_size, output_size, optimizer, lr):
         super(DynamicsIdNetwork, self).__init__()
-        self.fc1 = Linear(input_size, 256)
-        self.fc2 = Linear(256, 128)
-        self.fc3 = Linear(128, 64)
-        self.fc4 = Linear(64, output_size)
-        self.fc5 = RoundLayer(output_size, output_size)
+        self.fc1 = Linear(input_size, 32)
+        self.fc2 = Linear(32, 8)
+        self.fc3 = Linear(8, output_size)
 
         self.l_relu = LeakyReLU(0.1)
         self.optimizer = optimizer(self.parameters(), lr=lr)
@@ -156,23 +157,20 @@ class DynamicsIdNetwork(Module):
     def forward(self, x):
         x = self.l_relu(self.fc1(x))
         x = self.l_relu(self.fc2(x))
-        x = self.l_relu(self.fc3(x))
-        x = self.l_relu(self.fc4(x))
 
-        y = self.fc5(x)
-        return y
+        x = self.fc3(x)
+        return x
 
     def train(self, epoch, epochs=10):
         epochs_losses = []
+        loss_fn = torch.nn.MSELoss()
         for i_epoch in range(epochs):
             losses = []
             for observation in epoch.observations:
                 self.optimizer.zero_grad()
-                identified_values = self(torch.from_numpy(
-                    np.array(observation)).float())
-                true_values = torch.from_numpy(
-                    epoch.get_dynamics()).float()
-                loss = torch.mean((identified_values - true_values)**2)
+                identified_values = self(torch.from_numpy(np.array(observation)).float())
+                true_values = torch.from_numpy(epoch.get_dynamics_inv_g()).float()
+                loss = loss_fn(identified_values, true_values)
                 loss.backward()
                 self.optimizer.step()
                 losses.append(loss.item())
@@ -181,17 +179,3 @@ class DynamicsIdNetwork(Module):
             epochs_losses.append(mean_loss)
 
         return epochs_losses
-
-
-class RoundLayer(Module):
-    def __init__(self, input_size, output_size):
-        super(RoundLayer, self).__init__()
-
-    def forward(self, x):
-        rounded_tensor = torch.tensor(
-            [round(x.item()) if i < 2
-             else round(x.item(), 1)
-             for i, x in enumerate(x)],
-            requires_grad=True
-        )
-        return rounded_tensor

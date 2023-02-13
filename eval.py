@@ -64,7 +64,7 @@ class DiscoverEval:
 
     def evaluate(self, n_episodes=10):
         print(f"{'-'*35}Evaluation started{'-'*35}")
-
+        loss_fn = torch.nn.MSELoss()
         losses = []
         for episode in range(n_episodes):
             # generate random dynamic parameters
@@ -90,9 +90,8 @@ class DiscoverEval:
 
             y_pred = self.dynamic_id_network(freefall_obs)
             y_true = torch.from_numpy(
-                np.array([gravity, wind_power, turbulance_power]))
-
-            loss = torch.mean((y_pred - y_true)**2)
+                np.array([abs(gravity), wind_power, turbulance_power]))
+            loss = loss_fn(y_pred, y_true)
             losses.append(loss.item())
             print(
                 f"Loss : {loss} | y_pred = {y_pred.detach().numpy()} | y_true = {y_true.numpy()}")
