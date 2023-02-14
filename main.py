@@ -54,18 +54,18 @@ def evaluate(d_version, m_version, render):
 
 def main():
     parser = argparse.ArgumentParser(description='Run training and evaluation')
-    parser.add_argument('--m_version')
-    parser.add_argument('--d_version')
+    parser.add_argument('--m_version', type=str, default="1", help="Version of the actor and critic networks")
+    parser.add_argument('--d_version', type=str, default="1", help="Version of the discovery network")
 
-    parser.add_argument('--n_epochs', type=int, default=100_000)
+    parser.add_argument('--n_epochs', type=int, default=100_000, help="Number of epochs to train for")
 
-    parser.add_argument('--render', action='store_true')
-    parser.add_argument('--discover_train', action="store_true")
-    parser.add_argument('--discover_eval', action="store_true")
-    parser.add_argument('--train', action="store_true")
-    parser.add_argument('--evaluate', action="store_true")
-    parser.add_argument('--demo_train', action="store_true")
-    parser.add_argument('--demo_eval', action="store_true")
+    parser.add_argument('--render', action='store_true', help="Render the environment")
+    parser.add_argument('--discover_train', action="store_true", help="Train the discovery network")
+    parser.add_argument('--discover_eval', action="store_true", help="Evaluate the discovery network")
+    parser.add_argument('--train', action="store_true", help="Train the actor and critic networks")
+    parser.add_argument('--evaluate', action="store_true", help="Evaluate the actor and critic networks")
+    parser.add_argument('--demo_train', action="store_true", help="Train the demo network" )
+    parser.add_argument('--demo_eval', action="store_true", help="Evaluate the demo network")
     args = parser.parse_args()
 
     if args.demo_train:
