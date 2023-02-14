@@ -5,22 +5,24 @@ from tqdm import tqdm
 
 from ppo.structures import FreeFallEpisode
 from ppo.networks import ActorNetwork,  DynamicsIdNetwork
-from ppo.utils import d_state, random_dynamics
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from ppo.utils import d_state, random_dynamics, device
 
 
-class Demo:
+class DemoEval:
     def __init__(self, render):
         self.model_dir = "model/actor_critic/demo"
         self.render = render
 
         self.state_dim = 8
         self.action_dim = 4
+        self.random_dim = 3
         self.lr = 1e-3
 
+        self.n_steps = 500
+        self.fake_random = torch.from_numpy(np.array([10, 0, 0]))
+
         self.actor_network = ActorNetwork(
-            self.state_dim, self.action_dim, torch.optim.Adam, self.lr)
+            self.state_dim + self.random_dim, self.action_dim, torch.optim.Adam, self.lr)
         self.actor_network.load_state_dict(torch.load(
             f"{self.model_dir}/actor_model.pkl"))
 
@@ -34,9 +36,9 @@ class Demo:
         for episode in tqdm(range(n_episodes), desc='Evaluate'):
             state, _ = env.reset()
             score = 0
-            while True:
-                state = torch.from_numpy(state).float().to(device)
-                action, _ = self.actor_network.select_action(state)
+            for step in range(self.n_steps):
+                action, _ = self.actor_network.select_action(
+                    d_state(state, self.fake_random))
                 next_state, reward, done, *_ = env.step(action)
                 score += reward
                 if done:
@@ -90,7 +92,7 @@ class DiscoverEval:
 
             y_pred = self.dynamic_id_network(freefall_obs)
             y_true = torch.from_numpy(
-                np.array([abs(gravity), wind_power, turbulance_power]))
+                np.array([abs(gravity), wind_power, turbulance_power*10]))
             loss = loss_fn(y_pred, y_true)
             losses.append(loss.item())
             print(

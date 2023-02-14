@@ -1,6 +1,8 @@
 import torch
 import numpy as np
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def random_dynamics():
     gravity = np.random.randint(-11, 0)
@@ -16,6 +18,9 @@ def normalize_list(array):
 
 
 def cumulative_sum(array, gamma=1.0):
+    """
+    The discount factor is used to balance the trade-off between immediate and future rewards.
+    """
     curr = 0
     cumulative_array = []
 

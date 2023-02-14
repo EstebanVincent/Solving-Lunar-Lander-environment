@@ -2,6 +2,8 @@
 
 This code defines two classes, ActorNetwork and CriticNetwork, that are used to implement the Proximal Policy Optimization (PPO) actor-critic algorithm in reinforcement learning. The actor network is responsible for deciding the action to take in a given state, while the critic network is responsible for evaluating the state-action value. [1]<br>
 A third class DynamicsIdNetwork is used to to predict the dynamics parameters of the env based on the past states and actions of the system. [2]<br>
+The ActorNetwork and CriticNetwork are first trained using the default env. <br>
+The weights are then transfered for the randomization training. <br>
 
 For one episode :
 

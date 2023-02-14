@@ -58,7 +58,7 @@ class ActorNetwork(Module):
                     d_states, actions)
 
                 loss = (self.ac_loss(new_log_probabilities, log_probabilities,
-                        advantages, clip,).mean() - c1 * entropy.mean())
+                        advantages, clip).mean() - c1 * entropy.mean())
                 loss.backward(retain_graph=True)
                 self.optimizer.step()
 
@@ -72,16 +72,19 @@ class ActorNetwork(Module):
 
     @staticmethod
     def ac_loss(new_log_probabilities, old_log_probabilities, advantages, epsilon_clip):
+        # clipped prevent the policy from making big changes in a single iteration.
         probability_ratios = torch.exp(
             new_log_probabilities - old_log_probabilities)
         clipped_probabiliy_ratios = torch.clamp(
             probability_ratios, 1 - epsilon_clip, 1 + epsilon_clip
         )
 
-        surrogate_1 = probability_ratios * advantages
-        surrogate_2 = clipped_probabiliy_ratios * advantages
+        surrogate = probability_ratios * advantages
+        clipped_surrogate = clipped_probabiliy_ratios * advantages
 
-        return -torch.min(surrogate_1, surrogate_2)
+        actor_loss = -torch.min(surrogate, clipped_surrogate)
+
+        return actor_loss
 
 
 class CriticNetwork(Module):
@@ -124,7 +127,7 @@ class CriticNetwork(Module):
                 self.optimizer.zero_grad()
 
                 values = self(d_state)
-                
+
                 loss = (values - rewards_target).pow(2).mean()
 
                 loss.backward(retain_graph=True)
@@ -145,6 +148,7 @@ class DynamicsIdNetwork(Module):
     predict the opposite gravity, wind power, turbulance power
     """
     # input = state_size*10 = 80, output = 3
+
     def __init__(self, input_size, output_size, optimizer, lr):
         super(DynamicsIdNetwork, self).__init__()
         self.fc1 = Linear(input_size, 32)
@@ -168,8 +172,9 @@ class DynamicsIdNetwork(Module):
             losses = []
             for observation in epoch.observations:
                 self.optimizer.zero_grad()
-                identified_values = self(torch.from_numpy(np.array(observation)).float())
-                true_values = torch.from_numpy(epoch.get_dynamics_inv_g()).float()
+                identified_values = self(
+                    torch.from_numpy(np.array(observation)).float())
+                true_values = torch.from_numpy(epoch.get_dynamics()).float()
                 loss = loss_fn(identified_values, true_values)
                 loss.backward()
                 self.optimizer.step()
