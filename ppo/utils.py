@@ -5,9 +5,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def random_dynamics():
-    gravity = np.random.randint(-11, 0)
-    wind_power = np.random.randint(1, 20)
-    turbulance_power = np.round(np.random.uniform(0.1, 2), 1)
+    gravity = np.random.uniform(-5, 0)
+    wind_power = np.random.uniform(0, 10)
+    turbulance_power = np.random.uniform(0, 1)
     return gravity, wind_power, turbulance_power
 
 
