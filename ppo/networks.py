@@ -145,7 +145,7 @@ class CriticNetwork(Module):
 
 class DynamicsIdNetwork(Module):
     """
-    predict the opposite gravity, wind power, turbulance power
+    predict the opposite gravity, wind power, turbulence power
     """
     # input = state_size*10 = 80, output = 3
 
