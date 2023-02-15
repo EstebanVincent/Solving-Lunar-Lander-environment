@@ -76,7 +76,7 @@ class DemoTrain:
                     self.episode_ite,
                 )
                 self.writer.add_scalar(
-                    "Episode Lenght",
+                    "Episode Length",
                     len(episode.rewards),
                     self.episode_ite,
                 )
