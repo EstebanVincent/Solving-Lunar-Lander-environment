@@ -263,6 +263,12 @@ class Train:
                 self.writer.add_scalar("Actor Loss", a_loss, self.epoch_ite)
                 self.writer.add_scalar("Critic Loss", c_loss, self.epoch_ite)
             env.close()
+            if i_epoch % 50 == 0 and i_epoch != 0:
+                print(f"\nSaving model at epoch {i_epoch}")
+                torch.save(self.actor_network.state_dict(
+                ), f"{self.model_dir}/actor_critic/actor_model_v{self.m_version}_{i_epoch}.pkl")
+                torch.save(self.critic_network.state_dict(
+                ), f"{self.model_dir}/actor_critic/critic_model_v{self.m_version}_{i_epoch}.pkl")
         print(f"{'-'*25}Training Finished{'-'*25}")
         torch.save(self.actor_network.state_dict(),
                    f"{self.model_dir}/actor_critic/actor_model_v{self.m_version}.pkl")
